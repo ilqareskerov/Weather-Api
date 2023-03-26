@@ -1,17 +1,59 @@
 package com.company.weather.service;
 
+import com.company.weather.dto.WeatherDto;
+import com.company.weather.dto.WeatherResponse;
+import com.company.weather.model.WeatherEntity;
 import com.company.weather.repository.WeatherRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 @Service
 public class WeatherService {
+    private static final String URL_Link = "http://api.weatherstack.com/current?access_key=bdcd9dd8ae1f57476a9dd4786941ca48&query=";
     private final WeatherRepository weatherRepositor;
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public WeatherService(WeatherRepository weatherRepositor) {
+    public WeatherService(WeatherRepository weatherRepositor, RestTemplate restTemplate) {
         this.weatherRepositor = weatherRepositor;
+        this.restTemplate = restTemplate;
     }
 
     public WeatherDto getWeatherByCityName(String city) {
-        return weatherRepositor;
+        Optional<WeatherEntity> weatherEntity = weatherRepositor.findFirstByRequestedCityNameOrderByUpdatedTimeDesc(city);
+
+        if (!weatherEntity.isPresent()) {
+            return WeatherDto.convert(getWeatherFromWeatherStack(city));
+        }
+        if (weatherEntity.get().getUpdatedTime().isBefore(LocalDateTime.now().minusMinutes(30))) {
+            return WeatherDto.convert(getWeatherFromWeatherStack(city));
+        }
+
+        return WeatherDto.convert(weatherEntity.get());
+    }
+
+    public WeatherEntity getWeatherFromWeatherStack(String city) {
+        ResponseEntity<String> response = restTemplate.getForEntity(URL_Link + city, String.class);
+        try {
+            WeatherResponse weatherResponse = objectMapper.readValue(response.getBody(), WeatherResponse.class);
+            return saveWeatherEntity(city, weatherResponse);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private WeatherEntity saveWeatherEntity(String city, WeatherResponse weatherResponse) {
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        WeatherEntity entity = new WeatherEntity(city, weatherResponse.location().name(), weatherResponse.location().country(),
+                weatherResponse.current().temperature(),
+                LocalDateTime.now(), LocalDateTime.parse(weatherResponse.location().localtime(), dateTimeFormatter));
+        return weatherRepositor.save(entity);
     }
 }
