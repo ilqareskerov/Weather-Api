@@ -5,3 +5,6 @@ spring:
   h2:
     console:
       enabled: true
+weather-stack:
+  api-url: http://api.weatherstack.com/current
+  api-key: ${WEATHER_STACK_API_KEY:default-key}

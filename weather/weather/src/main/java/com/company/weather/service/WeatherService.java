@@ -1,5 +1,6 @@
 package com.company.weather.service;
 
+import com.company.weather.constants.Constants;
 import com.company.weather.dto.WeatherDto;
 import com.company.weather.dto.WeatherResponse;
 import com.company.weather.model.WeatherEntity;
@@ -39,14 +40,19 @@ public class WeatherService {
         return WeatherDto.convert(weatherEntity.get());
     }
 
+
+
     public WeatherEntity getWeatherFromWeatherStack(String city) {
-        ResponseEntity<String> response = restTemplate.getForEntity(URL_Link + city, String.class);
+        ResponseEntity<String> response = restTemplate.getForEntity(getWeatherStackUrl(city), String.class);
         try {
             WeatherResponse weatherResponse = objectMapper.readValue(response.getBody(), WeatherResponse.class);
             return saveWeatherEntity(city, weatherResponse);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
+    private String getWeatherStackUrl(String city) {
+        return Constants.WEATHER_STACK_API_BASE_URL + Constants.WEATHER_STACK_API_ACCESS_KEY_PARAM + Constants.API_KEY + Constants.WEATHER_STACK_API_QUERY_PARAM + city;
     }
 
     private WeatherEntity saveWeatherEntity(String city, WeatherResponse weatherResponse) {
