@@ -7,4 +7,13 @@ spring:
       enabled: true
 weather-stack:
   api-url: http://api.weatherstack.com/current
-  api-key: ${WEATHER_STACK_API_KEY:default-key}
+  api-key: 358c32aae1659064297a662d7a7f28e0
+  #  api-key: ${WEATHER_STACK_API_KEY:default-key}
+resilience4j:
+  ratelimiter:
+    instances:
+      basic:
+        limit-for-period: 10
+        limit-refresh-period: 1m
+        timeout-duration: 10s
+
